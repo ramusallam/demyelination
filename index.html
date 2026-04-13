@@ -406,8 +406,8 @@
       <div class="step" id="step-3" style="display:none">
         <div class="step-heading">Step 3: Intervention</div>
         <p>Your cursor is now simulating the autoimmune attack. <strong>Press and drag across the yellow myelin sheaths</strong> to scrub the myelin away.</p>
-        <p>The damage is gradual, just like a real attack. Watch the conduction velocity drop steadily as the myelin thins. Watch the MRI scan begin to light up with lesions.</p>
-        <div class="sketch-prompt"><span class="pen">✎</span>Record the conduction velocity at 25%, 50%, and 75% lesion volume in your handbook.</div>
+        <p>You can also <strong>hover over a sheath and scroll</strong> to thin it or thicken it back. Scroll down to strip myelin. Scroll up to regrow it. Watch the signal speed respond in real time, both ways.</p>
+        <div class="sketch-prompt"><span class="pen">✎</span>Record the conduction velocity at 25%, 50%, and 75% lesion volume. Then scroll up on a segment to restore it and note how the signal recovers.</div>
       </div>
 
       <!-- Step 4 -->
@@ -747,6 +747,30 @@
   const stopScrub = () => { isScrubbing = false; };
   window.addEventListener('mouseup', stopScrub);
   canvas.addEventListener('mouseleave', stopScrub);
+
+  // Wheel to adjust myelin thickness bidirectionally — up restores, down damages
+  const WHEEL_STEP = 0.05;
+  canvas.addEventListener('wheel', (e) => {
+    if (!attackMode) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    let hit = false;
+    myelinNodes.forEach(node => {
+      if (x >= node.x && x <= node.x + node.w &&
+          y >= node.y - 30 && y <= node.y + node.h + 30) {
+        // deltaY > 0 means scroll down (shrink / damage)
+        // deltaY < 0 means scroll up (grow / restore)
+        const delta = e.deltaY > 0 ? -WHEEL_STEP : WHEEL_STEP;
+        node.health = Math.max(0, Math.min(1, node.health + delta));
+        hit = true;
+      }
+    });
+    if (hit) {
+      e.preventDefault();
+      updateStats();
+    }
+  }, { passive: false });
 
   // Touch support for iPads / Chromebooks
   canvas.addEventListener('touchstart', (e) => {
