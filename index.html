@@ -1,430 +1,710 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiple Sclerosis & Action Potentials</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* CSS resets & variables */
-        :root {
-            --bg-color: #0b0f19;
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent-cyan: #00f0ff;
-            --accent-pink: #ff003c;
-            --myelin-color: #fceea7;
-            --axon-color: #3d5a80;
-            --text-main: #f0f4f8;
-            --text-muted: #9ba4b5;
-        }
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--bg-color); color: var(--text-main); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; min-height: 0; }
-        
-        /* Layouts */
-        .sidebar { width: 380px; padding: 25px; display: flex; flex-direction: column; gap: 20px; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); z-index: 10; box-shadow: 5px 0 25px rgba(0,0,0,0.5); overflow-y: auto; }
-        .main-view { flex: 1; display: flex; flex-direction: column; position: relative; }
-        
-        .panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; backdrop-filter: blur(10px); }
-        h1 { font-size: 1.6rem; margin: 0 0 5px 0; color: var(--accent-cyan); font-weight: 700; letter-spacing: -0.5px; text-shadow: 0 0 10px rgba(0,240,255,0.4); }
-        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        h2 { font-size: 1.25rem; margin: 0 0 15px 0; font-weight: 600; }
-        p { line-height: 1.6; color: rgba(240, 244, 248, 0.85); font-size: 0.95rem; margin-bottom: 15px; }
-        
-        /* POGIL States */
-        .step { display: none; }
-        .step.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.1, 0.0, 0.1, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        
-        button { background: rgba(0, 240, 255, 0.08); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 12px 20px; border-radius: 8px; font-family: inherit; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.25s ease; width: 100%; box-shadow: 0 0 15px rgba(0, 240, 255, 0.15); }
-        button:hover:not(:disabled) { background: var(--accent-cyan); color: #000; box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); transform: translateY(-1px); }
-        button:disabled { background: transparent; border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; box-shadow: none; }
-        
-        .progress-indicator { display: flex; gap: 8px; margin-bottom: 25px; }
-        .pip { flex: 1; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; transition: all 0.4s ease; }
-        .pip.filled { background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
-        
-        /* Sim Views */
-        .sim-container { flex: 1; display: flex; flex-direction: column; padding: 40px; gap: 40px; align-items: center; justify-content: center; background: radial-gradient(circle at center, #1a233a 0%, var(--bg-color) 100%); overflow-y: auto; min-height: 0; }
-        .view-box { width: 100%; max-width: 900px; position: relative; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        .axon-view { height: 280px; }
-        .brain-view { height: 380px; }
-        
-        .label-overlay { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; color: #fff; border: 1px solid var(--glass-border); text-transform: uppercase; letter-spacing: 1.5px; z-index: 5; }
-        
-        canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        
-        /* Stats */
-        .stats { display: flex; justify-content: space-around; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--glass-border); }
-        .stat-box { text-align: center; }
-        .stat-val { font-size: 1.8rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; transition: color 0.3s ease; }
-        .stat-lbl { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-top: 4px; }
-        
-        /* Myelin Attack Mode */
-        .attack-mode-badge { display: none; position: absolute; top: 20px; right: 20px; background: rgba(255, 0, 60, 0.15); border: 1px solid var(--accent-pink); color: var(--accent-pink); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; z-index: 5; animation: pulse 2s infinite; pointer-events: none; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.3); } 70% { box-shadow: 0 0 0 10px rgba(255, 0, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); } }
-        
-        /* Interactive items */
-        #lesionLayer circle { opacity: 0; transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1); fill: #fff; filter: blur(3px); }
-        
-        .choice-btn { margin-bottom: 10px; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #fff; box-shadow: none; text-align: left; padding-left: 15px; }
-        .choice-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: none; box-shadow: none; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Demyelination</title>
+<style>
+  :root {
+    --bg-0: #05070f;
+    --bg-1: #0b1022;
+    --ink-hi: #f2f5fb;
+    --ink-mid: #9fb0ca;
+    --ink-low: #58688a;
+    --accent: #6ee7e5;
+    --danger: #ff6b7a;
+    --myelin: #f0d983;
+    --axon: #3d5a80;
+    --panel: rgba(255,255,255,0.02);
+    --panel-border: rgba(255,255,255,0.06);
+    --note-bg: #fdf1c6;
+    --note-ink: #2a1e08;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, #0f1630 0%, transparent 70%),
+      linear-gradient(180deg, #05070f 0%, #030510 100%);
+    background-attachment: fixed;
+    color: var(--ink-hi);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  header {
+    padding: 14px 32px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  header .title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink-low);
+  }
+  .step-indicator {
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-low);
+    letter-spacing: 1px;
+  }
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px 32px;
+  }
+  .handbook-banner {
+    margin: 0 auto 14px;
+    padding: 9px 18px;
+    background: linear-gradient(90deg, rgba(255, 209, 102, 0.08), rgba(110, 231, 229, 0.04));
+    border: 1px solid rgba(255, 209, 102, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #cfc5aa;
+  }
+  .handbook-banner .hb-tag {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 4px 8px;
+    background: rgba(255, 209, 102, 0.18);
+    color: #ffd166;
+    border-radius: 5px;
+  }
+  .handbook-banner strong { color: #ffd166; font-weight: 600; }
+
+  .stage {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: border-color 300ms ease, box-shadow 300ms ease;
+  }
+  .stage.attacking {
+    border-color: rgba(255, 107, 122, 0.35);
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.5),
+      0 0 30px rgba(255, 107, 122, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .stage-label {
+    position: absolute;
+    top: 18px;
+    left: 22px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-low);
+    z-index: 3;
+  }
+  .attack-badge {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    background: rgba(255, 107, 122, 0.12);
+    border: 1px solid rgba(255, 107, 122, 0.4);
+    color: var(--danger);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    z-index: 3;
+    display: none;
+    animation: pulse 2s infinite;
+  }
+  .attack-badge.visible { display: block; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; box-shadow: 0 0 18px rgba(255, 107, 122, 0.25); }
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 320px;
+  }
+  canvas.attacking { cursor: crosshair; }
+
+  .phase-bar {
+    padding: 16px 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    border-top: 1px solid var(--panel-border);
+    background: rgba(5, 8, 20, 0.4);
+  }
+  .phase-name {
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    color: var(--accent);
+    transition: color 400ms ease;
+  }
+  .stats-block {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .stat {
+    text-align: right;
+  }
+  .stat-val {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    color: var(--ink-hi);
+    transition: color 300ms ease;
+  }
+  .stat-val .unit {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-mid);
+    margin-left: 2px;
+  }
+  .stat-lbl {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-low);
+    margin-top: 3px;
+  }
+
+  .secondary-row {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 14px;
+  }
+  .mri-stage {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    overflow: hidden;
+    padding: 40px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 340px;
+    box-shadow:
+      0 20px 50px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .mri-stage svg { max-width: 100%; height: auto; }
+  #lesionLayer circle {
+    opacity: 0;
+    fill: #fff;
+    filter: blur(2.5px);
+    transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .notes-card {
+    background: var(--note-bg);
+    color: var(--note-ink);
+    padding: 18px 24px 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    line-height: 1.6;
+    position: relative;
+    box-shadow:
+      0 14px 40px rgba(255, 209, 102, 0.08),
+      inset 0 0 0 1px rgba(0,0,0,0.02);
+  }
+  .notes-card .step-heading {
+    font-weight: 700;
+    font-size: 16px;
+    color: #7a3a00;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+  }
+  .notes-card p { margin: 0 0 8px; }
+  .notes-card p:last-child { margin-bottom: 0; }
+  .notes-card strong { font-weight: 700; color: #2a1e08; }
+
+  .choice-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0 6px;
+  }
+  .choice-btn {
+    text-align: left;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #5a4200;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(122, 58, 0, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .choice-btn:hover { background: rgba(255, 255, 255, 0.8); border-color: rgba(122, 58, 0, 0.45); }
+  .choice-btn.selected {
+    background: rgba(122, 58, 0, 0.1);
+    border-color: #7a3a00;
+    color: #7a3a00;
+  }
+  .sketch-prompt {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(122, 86, 0, 0.25);
+    font-size: 13px;
+    font-style: italic;
+    color: #8a6100;
+  }
+  .sketch-prompt .pen { font-style: normal; margin-right: 4px; }
+
+  nav {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: var(--ink-hi);
+    cursor: pointer;
+    transition: background 150ms, transform 50ms, border-color 150ms;
+  }
+  button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.15);
+  }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.3; cursor: not-allowed; }
+  button.primary {
+    background: linear-gradient(180deg, #6ee7e5 0%, #3dbfc0 100%);
+    color: #03252a;
+    border-color: rgba(110, 231, 229, 0.4);
+    box-shadow: 0 6px 20px rgba(110, 231, 229, 0.25);
+  }
+  button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+  button.primary:disabled { background: rgba(110,231,229,0.15); color: rgba(3,37,42,0.4); box-shadow: none; }
+  .btn-group { display: flex; gap: 10px; }
+
+  @media (max-width: 820px) {
+    .secondary-row { grid-template-columns: 1fr; }
+    .mri-stage { min-height: 280px; }
+    .phase-bar { grid-template-columns: 1fr; }
+    .stats-block { justify-content: space-between; }
+    .phase-name { font-size: 20px; }
+  }
+</style>
 </head>
 <body>
-    <div class="sidebar">
-        <!-- Title & Progress -->
-        <div>
-            <h1>Neural Degradation</h1>
-            <p class="subtitle">A Multiple Sclerosis Simulation</p>
-            <div class="progress-indicator" id="progressIndicator">
-                <div class="pip filled"></div>
-                <div class="pip"></div>
-                <div class="pip"></div>
-                <div class="pip"></div>
-            </div>
-        </div>
 
-        <!-- POGIL Steps Container -->
-        <div class="panel">
-            <!-- Step 1: Observe -->
-            <div class="step active" id="step-1">
-                <h2>1. Exploration</h2>
-                <p>Observe the action potential (the glowing signal) traveling down the healthy axon. It is wrapped in <b>myelin sheaths</b> (the yellow segments).</p>
-                <p>Notice how the signal jumps rapidly between the gaps. This hyper-fast travel is called <b>saltatory conduction</b>.</p>
-                <button onclick="nextStep(2)">I've observed the signal</button>
-            </div>
-            
-            <!-- Step 2: Hypothesize -->
-            <div class="step" id="step-2">
-                <h2>2. Hypothesis</h2>
-                <p>Multiple Sclerosis (MS) is an autoimmune disease where the body's immune system attacks and destroys the myelin sheaths.</p>
-                <p><b>Question:</b> What do you predict will happen to the speed of the action potential if myelin is removed?</p>
-                <div style="display: flex; flex-direction: column; margin-bottom: 20px; margin-top: 15px;">
-                    <button class="choice-btn" onclick="selectHypothesis('faster')">It will travel faster</button>
-                    <button class="choice-btn" onclick="selectHypothesis('slower')">It will travel much slower</button>
-                    <button class="choice-btn" onclick="selectHypothesis('same')">It will stay the same</button>
-                </div>
-                <button id="btn-step-2" disabled onclick="enableAttackMode()">Lock In Prediction</button>
-            </div>
-            
-            <!-- Step 3: Intervene -->
-            <div class="step" id="step-3">
-                <h2>3. Intervention</h2>
-                <p>Your cursor is now simulating an autoimmune attack. <b>Click on the myelin sheaths on the axon</b> to destroy them.</p>
-                <p>Observe the changes in signal speed, and watch what happens to the brain MRI view below as myelin is lost (demyelination).</p>
-                <div class="stats" style="margin-bottom: 20px; border-top: none; padding-top: 0;">
-                    <div class="stat-box">
-                        <div class="stat-val" id="myelin-count">5/5</div>
-                        <div class="stat-lbl" style="color: var(--myelin-color)">Myelin Intact</div>
-                    </div>
-                </div>
-                <button id="btn-step-3" disabled onclick="nextStep(4)">Proceed to Conclusion</button>
-            </div>
-            
-            <!-- Step 4: Conclude -->
-            <div class="step" id="step-4">
-                <h2>4. Conclusion</h2>
-                <p>Without myelin insulation, neural signals degrade and slow down drastically. On the MRI scan, we see this damage as white matter <b>lesions</b> (bright spots).</p>
-                <p>These lesions represent areas of demyelination and inflammation, leading to the sensory and motor issues characteristic of MS.</p>
-                <button onclick="resetSim()" style="margin-top: 15px; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: var(--text-main); box-shadow: none;">Reset Simulation</button>
-            </div>
+<header>
+  <div class="title">Demyelination</div>
+  <div class="step-indicator" id="stepIndicator">01 / 04</div>
+</header>
+
+<main>
+  <div class="handbook-banner">
+    <div class="hb-tag">POGIL</div>
+    <div>Follow along in your handbook. For each step: <strong>observe carefully</strong>, <strong>write your prediction</strong>, and <strong>sketch what you see</strong>. Color the healthy axon in yellow, the damaged areas in red.</div>
+  </div>
+
+  <div class="stage" id="axonStage">
+    <div class="stage-label">Motor Neuron Axon</div>
+    <div class="attack-badge" id="attackBadge">Immune Attack Active · Click Myelin</div>
+    <canvas id="axonCanvas"></canvas>
+    <div class="phase-bar">
+      <div class="phase-name" id="phaseName">Step 1 · Exploration</div>
+      <div class="stats-block">
+        <div class="stat">
+          <div class="stat-val" id="speedStat">120<span class="unit">m/s</span></div>
+          <div class="stat-lbl">Conduction Velocity</div>
         </div>
-        
-        <div class="panel" style="margin-top: auto;">
-            <div class="stats" style="margin-top: 0; padding-top: 0; border: none;">
-                <div class="stat-box">
-                    <div class="stat-val" id="speed-meter" style="color: var(--accent-cyan);">120<span style="font-size: 0.9rem; margin-left:2px; font-weight:500;">m/s</span></div>
-                    <div class="stat-lbl">Conduction Velocity</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-val" id="lesion-meter" style="color: #fff;">0<span style="font-size: 0.9rem; margin-left:2px; font-weight:500;">%</span></div>
-                    <div class="stat-lbl">Lesion Volume</div>
-                </div>
-            </div>
+        <div class="stat">
+          <div class="stat-val" id="lesionStat">0<span class="unit">%</span></div>
+          <div class="stat-lbl">Lesion Volume</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="secondary-row">
+    <div class="notes-card">
+      <!-- Step 1 -->
+      <div class="step" id="step-1">
+        <div class="step-heading">Step 1: Exploration</div>
+        <p>Observe the action potential, the glowing signal traveling down the healthy axon. It is wrapped in <strong>myelin sheaths</strong>, the yellow segments.</p>
+        <p>The signal jumps rapidly between the gaps. This is called <strong>saltatory conduction</strong>, and it is what makes healthy neural signaling so fast.</p>
+        <div class="sketch-prompt"><span class="pen">✎</span>Sketch the axon in your handbook. Label the myelin sheaths, the gaps (Nodes of Ranvier), and the signal.</div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step" id="step-2" style="display:none">
+        <div class="step-heading">Step 2: Hypothesis</div>
+        <p>Multiple Sclerosis is an autoimmune disease. The body's own immune system attacks and destroys the myelin sheaths on neurons in the brain and spinal cord.</p>
+        <p><strong>Prediction:</strong> What will happen to the speed of the action potential if the myelin is removed?</p>
+        <div class="choice-group" id="choiceGroup">
+          <button class="choice-btn" data-choice="faster">It will travel faster</button>
+          <button class="choice-btn" data-choice="slower">It will travel much slower</button>
+          <button class="choice-btn" data-choice="same">It will stay the same</button>
+        </div>
+        <div class="sketch-prompt"><span class="pen">✎</span>Write your prediction in your handbook and one sentence explaining your reasoning.</div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step" id="step-3" style="display:none">
+        <div class="step-heading">Step 3: Intervention</div>
+        <p>Your cursor is now simulating the autoimmune attack. <strong>Click on the yellow myelin sheaths</strong> on the axon above to destroy them.</p>
+        <p>Watch the conduction velocity drop with each strike. Watch the MRI scan on the right begin to show lesions, bright white spots where myelin has been lost.</p>
+        <div class="sketch-prompt"><span class="pen">✎</span>After each click, record the conduction velocity and lesion volume in your handbook.</div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step" id="step-4" style="display:none">
+        <div class="step-heading">Step 4: Conclusion</div>
+        <p>Without myelin insulation, neural signals degrade and slow down drastically. On the T2-weighted MRI scan, this damage appears as white matter <strong>lesions</strong>.</p>
+        <p>These lesions represent areas of demyelination and inflammation. They are the physical basis for the sensory, motor, and cognitive symptoms that characterize MS.</p>
+        <div class="sketch-prompt"><span class="pen">✎</span>Write a 2-sentence conclusion comparing the healthy and demyelinated axon. Compare your prediction from Step 2 to what you observed.</div>
+      </div>
     </div>
 
-    <!-- Main Visuals -->
-    <div class="main-view">
-        <div class="sim-container">
-            <!-- Axon Simulation -->
-            <div class="view-box axon-view">
-                <div class="label-overlay">Motor Neuron (Axon)</div>
-                <div class="attack-mode-badge" id="attackBadge">IMMUNE ATTACK ACTIVE: CLICK MYELIN</div>
-                <canvas id="axonCanvas"></canvas>
-            </div>
-            
-            <!-- Brain MRI Simulation -->
-            <div class="view-box brain-view">
-                <div class="label-overlay">T2-Weighted MRI Scan</div>
-                <svg width="240" height="300" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <radialGradient id="brainGlow" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#2a3345"/>
-                            <stop offset="100%" stop-color="#0f131a"/>
-                        </radialGradient>
-                    </defs>
-                    <!-- Sylized brain cross-section for abstract rendering -->
-                    <path d="M100,20 C150,20 185,55 185,120 C185,190 145,235 100,235 C55,235 15,190 15,120 C15,55 50,20 100,20 Z" fill="url(#brainGlow)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-                    <!-- Ventricles -->
-                    <path d="M85,100 C75,100 75,140 85,150 C95,155 95,95 85,100 Z" fill="#070a0f"/>
-                    <path d="M115,100 C125,100 125,140 115,150 C105,155 105,95 115,100 Z" fill="#070a0f"/>
-                    
-                    <!-- Lesions Group (Initially Hidden) -->
-                    <g id="lesionLayer">
-                        <circle cx="55" cy="85" r="9" id="lesion-1" />
-                        <circle cx="145" cy="95" r="13" id="lesion-2" />
-                        <circle cx="75" cy="180" r="6" id="lesion-3" />
-                        <circle cx="130" cy="170" r="10" id="lesion-4" />
-                        <circle cx="100" cy="55" r="8" id="lesion-5" />
-                    </g>
-                </svg>
-            </div>
-        </div>
+    <div class="mri-stage">
+      <div class="stage-label">T2-Weighted MRI</div>
+      <svg width="240" height="300" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="brainGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#2a3345"/>
+            <stop offset="100%" stop-color="#0f131a"/>
+          </radialGradient>
+        </defs>
+        <path d="M100,20 C150,20 185,55 185,120 C185,190 145,235 100,235 C55,235 15,190 15,120 C15,55 50,20 100,20 Z"
+              fill="url(#brainGlow)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+        <path d="M85,100 C75,100 75,140 85,150 C95,155 95,95 85,100 Z" fill="#070a0f"/>
+        <path d="M115,100 C125,100 125,140 115,150 C105,155 105,95 115,100 Z" fill="#070a0f"/>
+        <g id="lesionLayer">
+          <circle cx="55"  cy="85"  r="9"  id="lesion-1" />
+          <circle cx="145" cy="95"  r="13" id="lesion-2" />
+          <circle cx="75"  cy="180" r="6"  id="lesion-3" />
+          <circle cx="130" cy="170" r="10" id="lesion-4" />
+          <circle cx="100" cy="55"  r="8"  id="lesion-5" />
+        </g>
+      </svg>
     </div>
+  </div>
 
-    <script>
-        // POGIL Logic
-        let currentStep = 1;
-        let pugs = Array.from(document.querySelectorAll('.pip'));
-        let attackMode = false;
-        
-        function nextStep(step) {
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            document.getElementById(`step-${step}`).classList.add('active');
-            currentStep = step;
-            pugs.forEach((p, i) => {
-                if(i < step) p.classList.add('filled');
-                else p.classList.remove('filled');
-            });
-        }
-        
-        function selectHypothesis(choice) {
-            document.querySelectorAll('.choice-btn').forEach(b => {
-                b.style.background = 'rgba(255, 255, 255, 0.05)';
-                b.style.color = '#fff';
-                b.style.borderColor = 'rgba(255,255,255,0.1)';
-            });
-            event.target.style.background = 'rgba(0, 240, 255, 0.15)';
-            event.target.style.color = 'var(--accent-cyan)';
-            event.target.style.borderColor = 'var(--accent-cyan)';
-            document.getElementById('btn-step-2').disabled = false;
-        }
+  <nav>
+    <button id="resetBtn">Start Over</button>
+    <div class="btn-group">
+      <button id="prevBtn" disabled>← Back</button>
+      <button id="nextBtn" class="primary">Next →</button>
+    </div>
+  </nav>
+</main>
 
-        function enableAttackMode() {
-            nextStep(3);
-            attackMode = true;
-            document.getElementById('attackBadge').style.display = 'block';
-            document.querySelector('.axon-view').style.cursor = 'crosshair';
-            document.querySelector('.axon-view').style.borderColor = 'rgba(255, 0, 60, 0.4)';
-            document.querySelector('.axon-view').style.boxShadow = '0 0 20px rgba(255, 0, 60, 0.15)';
-        }
+<script>
+  // =====================================================
+  // State
+  // =====================================================
+  const TOTAL_STEPS = 4;
+  const MYELIN_COUNT = 5;
+  const PHASE_NAMES = [
+    'Step 1 · Exploration',
+    'Step 2 · Hypothesis',
+    'Step 3 · Intervention',
+    'Step 4 · Conclusion'
+  ];
 
-        function resetSim() {
-            attackMode = false;
-            document.getElementById('attackBadge').style.display = 'none';
-            document.querySelector('.axon-view').style.cursor = 'default';
-            document.querySelector('.axon-view').style.borderColor = 'rgba(255,255,255,0.05)';
-            document.querySelector('.axon-view').style.boxShadow = '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)';
-            
-            myelinNodes.forEach(n => n.healthy = true);
-            updateStats();
-            document.getElementById('btn-step-2').disabled = true;
-            document.getElementById('btn-step-3').disabled = true;
-            document.querySelectorAll('.choice-btn').forEach(b => {
-                b.style.background = 'rgba(255, 255, 255, 0.05)';
-                b.style.color = '#fff';
-                b.style.borderColor = 'rgba(255,255,255,0.1)';
-            });
-            nextStep(1);
-        }
+  let currentStep = 1;
+  let attackMode = false;
+  let hypothesisSelected = false;
 
-        // Simulation Canvas setup
-        const canvas = document.getElementById('axonCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        function resize() {
-            if(!canvas.parentElement) return;
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-            initNodes(); // re-init nodes on resize
-        }
-        window.addEventListener('resize', resize);
+  // =====================================================
+  // Step navigation
+  // =====================================================
+  const stepIndicator = document.getElementById('stepIndicator');
+  const phaseName = document.getElementById('phaseName');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const attackBadge = document.getElementById('attackBadge');
+  const axonStage = document.getElementById('axonStage');
+  const canvas = document.getElementById('axonCanvas');
 
-        // Physics variables
-        const myelinCount = 5;
-        let myelinNodes = [];
-        let axonY = 0;
-        
-        function initNodes() {
-            axonY = canvas.height / 2;
-            const padding = Math.min(canvas.width * 0.1, 80);
-            const segmentW = (canvas.width - padding*2) / myelinCount;
-            myelinNodes = [];
-            for(let i=0; i<myelinCount; i++) {
-                myelinNodes.push({
-                    x: padding + i*segmentW + segmentW*0.1,
-                    y: axonY - 25,
-                    w: segmentW*0.8,
-                    h: 50,
-                    healthy: true,
-                    idx: i
-                });
-            }
-        }
+  function showStep(step) {
+    currentStep = step;
+    for (let i = 1; i <= TOTAL_STEPS; i++) {
+      const el = document.getElementById('step-' + i);
+      if (el) el.style.display = (i === step) ? 'block' : 'none';
+    }
+    stepIndicator.textContent = String(step).padStart(2, '0') + ' / ' + String(TOTAL_STEPS).padStart(2, '0');
+    phaseName.textContent = PHASE_NAMES[step - 1];
+    updateNavButtons();
 
-        let signal = { x: 0 };
-        const NORMAL_GAP_SPEED = 6;
-        const MYELIN_SPEED = 28;
-        const DEMYELINATED_SPEED = 1.5;
-        
-        // Ensure initial sizing
-        setTimeout(resize, 100);
+    // Attack mode activation/deactivation
+    if (step === 3) {
+      enableAttackMode();
+    } else {
+      disableAttackMode();
+    }
+  }
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if(myelinNodes.length === 0) return requestAnimationFrame(draw);
-            
-            // Draw central axon
-            ctx.beginPath();
-            ctx.moveTo(0, axonY);
-            ctx.lineTo(canvas.width, axonY);
-            ctx.strokeStyle = '#2a3b5c';
-            ctx.lineWidth = 14;
-            ctx.lineCap = 'round';
-            ctx.stroke();
+  function updateNavButtons() {
+    prevBtn.disabled = (currentStep === 1);
+    if (currentStep === TOTAL_STEPS) {
+      nextBtn.textContent = 'Restart ↻';
+      nextBtn.disabled = false;
+    } else {
+      nextBtn.textContent = 'Next →';
+      // Step 2 requires a hypothesis selection before moving forward
+      if (currentStep === 2) nextBtn.disabled = !hypothesisSelected;
+      // Step 3 requires all myelin destroyed before moving forward
+      else if (currentStep === 3) nextBtn.disabled = myelinNodes.some(n => n.healthy);
+      else nextBtn.disabled = false;
+    }
+  }
 
-            // Draw Myelin
-            myelinNodes.forEach(node => {
-                if (node.healthy) {
-                    ctx.fillStyle = '#ebdc91'; // Myelin base
-                    ctx.beginPath();
-                    ctx.roundRect(node.x, node.y, node.w, node.h, 12);
-                    ctx.fill();
-                    // Glow / Inner shadow
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                } else {
-                    // Damaged debris
-                    ctx.fillStyle = 'rgba(255, 0, 60, 0.2)';
-                    ctx.beginPath();
-                    ctx.ellipse(node.x + node.w/3, node.y + node.h/2, node.w/2.5, 8, 0.2, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.ellipse(node.x + node.w*0.7, node.y + node.h/2, node.w/3, 5, -0.2, 0, Math.PI*2);
-                    ctx.fill();
-                }
-            });
+  function enableAttackMode() {
+    attackMode = true;
+    attackBadge.classList.add('visible');
+    axonStage.classList.add('attacking');
+    canvas.classList.add('attacking');
+  }
+  function disableAttackMode() {
+    attackMode = false;
+    attackBadge.classList.remove('visible');
+    axonStage.classList.remove('attacking');
+    canvas.classList.remove('attacking');
+  }
 
-            // Signal logic
-            let currentSpeed = NORMAL_GAP_SPEED;
-            let onHealthyMyelin = false;
-            let onDamagedMyelin = false;
-            
-            myelinNodes.forEach(node => {
-                // Expanding the check area slightly to account for high speed step skipping
-                if(signal.x >= node.x - 10 && signal.x <= node.x + node.w + 10) {
-                    if(node.healthy) onHealthyMyelin = true;
-                    else onDamagedMyelin = true;
-                }
-            });
+  nextBtn.addEventListener('click', () => {
+    if (currentStep === TOTAL_STEPS) {
+      resetAll();
+      return;
+    }
+    showStep(currentStep + 1);
+  });
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 1) showStep(currentStep - 1);
+  });
+  resetBtn.addEventListener('click', resetAll);
 
-            if (onHealthyMyelin) currentSpeed = MYELIN_SPEED;
-            else if (onDamagedMyelin) currentSpeed = DEMYELINATED_SPEED;
+  // Hypothesis selection
+  document.getElementById('choiceGroup').addEventListener('click', (e) => {
+    const btn = e.target.closest('.choice-btn');
+    if (!btn) return;
+    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    hypothesisSelected = true;
+    updateNavButtons();
+  });
 
-            signal.x += currentSpeed;
-            if (signal.x > canvas.width + 100) signal.x = -100;
+  function resetAll() {
+    hypothesisSelected = false;
+    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+    myelinNodes.forEach(n => n.healthy = true);
+    updateStats();
+    showStep(1);
+  }
 
-            // Draw Signal
-            ctx.beginPath();
-            let radius = onDamagedMyelin ? 8 : (onHealthyMyelin ? 16 : 12);
-            ctx.arc(signal.x, axonY, radius, 0, Math.PI*2);
-            
-            let color = onDamagedMyelin ? '#ff003c' : '#00f0ff';
-            ctx.fillStyle = color;
-            ctx.shadowBlur = onDamagedMyelin ? 15 : 35;
-            ctx.shadowColor = color;
-            ctx.fill();
-            // Bright core
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.arc(signal.x, axonY, radius*0.4, 0, Math.PI*2);
-            ctx.fill();
-            
-            requestAnimationFrame(draw);
-        }
-        
-        requestAnimationFrame(draw);
+  // =====================================================
+  // Canvas simulation
+  // =====================================================
+  const ctx = canvas.getContext('2d');
+  let myelinNodes = [];
+  let axonY = 0;
+  const NORMAL_GAP_SPEED = 6;
+  const MYELIN_SPEED = 28;
+  const DEMYELINATED_SPEED = 1.6;
 
-        // Interaction
-        canvas.addEventListener('click', (e) => {
-            if(!attackMode) return;
-            const rect = canvas.getBoundingClientRect();
-            // scale mouse coordinates to canvas dimensions
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const mouseX = (e.clientX - rect.left) * scaleX;
-            const mouseY = (e.clientY - rect.top) * scaleY;
+  function resize() {
+    if (!canvas.parentElement) return;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    initNodes();
+  }
+  window.addEventListener('resize', resize);
 
-            let hit = false;
-            myelinNodes.forEach((node) => {
-                if (node.healthy && 
-                    mouseX >= node.x && mouseX <= node.x + node.w && 
-                    mouseY >= node.y - 20 && mouseY <= node.y + node.h + 20) {
-                    node.healthy = false;
-                    hit = true;
-                    createHitMarker(mouseX, mouseY);
-                }
-            });
-            if(hit) updateStats();
-        });
+  function initNodes() {
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+    axonY = h / 2;
+    const padding = Math.min(w * 0.1, 80);
+    const segW = (w - padding * 2) / MYELIN_COUNT;
+    const wasHealthy = myelinNodes.map(n => n.healthy);
+    myelinNodes = [];
+    for (let i = 0; i < MYELIN_COUNT; i++) {
+      myelinNodes.push({
+        x: padding + i * segW + segW * 0.1,
+        y: axonY - 25,
+        w: segW * 0.8,
+        h: 50,
+        healthy: wasHealthy[i] !== undefined ? wasHealthy[i] : true,
+        idx: i
+      });
+    }
+  }
 
-        function createHitMarker(x, y) {
-            // Flash screen
-            canvas.style.opacity = '0.5';
-            setTimeout(() => {
-                canvas.style.opacity = '1';
-                canvas.style.transition = 'opacity 0.2s';
-            }, 50);
-        }
+  let signal = { x: 0 };
 
-        function updateStats() {
-            let healthyCount = myelinNodes.filter(n => n.healthy).length;
-            let damagedPercentage = ((myelinCount - healthyCount) / myelinCount) * 100;
-            
-            document.getElementById('myelin-count').innerText = `${healthyCount}/${myelinCount}`;
-            document.getElementById('lesion-meter').innerHTML = `${Math.round(damagedPercentage)}<span style="font-size: 0.9rem; margin-left:2px; font-weight:500;">%</span>`;
-            
-            if(damagedPercentage > 0) {
-                document.getElementById('lesion-meter').style.color = 'var(--accent-pink)';
-            } else {
-                document.getElementById('lesion-meter').style.color = '#fff';
-            }
-            
-            // Speed logic proxy
-            let currentVel = healthyCount == myelinCount ? 120 : (healthyCount == 0 ? 5 : Math.round((healthyCount/myelinCount)*120));
-            document.getElementById('speed-meter').innerHTML = `${currentVel}<span style="font-size: 0.9rem; margin-left:2px; font-weight:500;">m/s</span>`;
-            document.getElementById('speed-meter').style.color = currentVel < 50 ? 'var(--accent-pink)' : 'var(--accent-cyan)';
+  function draw() {
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+    if (myelinNodes.length === 0) return requestAnimationFrame(draw);
 
-            // Update Brain Lesions
-            for(let i=0; i<myelinCount; i++) {
-                let lesion = document.getElementById(`lesion-${i+1}`);
-                if (lesion) {
-                    if (myelinCount - healthyCount > i) {
-                        lesion.style.opacity = 0.8 + (Math.random()*0.2); // slight random brightness
-                    } else {
-                        lesion.style.opacity = 0;
-                    }
-                }
-            }
+    // Axon baseline
+    ctx.beginPath();
+    ctx.moveTo(0, axonY);
+    ctx.lineTo(w, axonY);
+    ctx.strokeStyle = '#2a3b5c';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 
-            if(healthyCount === 0 && currentStep === 3) {
-                document.getElementById('btn-step-3').disabled = false;
-            }
-        }
-    </script>
+    // Myelin sheaths (healthy) or debris (damaged)
+    myelinNodes.forEach(node => {
+      if (node.healthy) {
+        // Outer glow
+        ctx.fillStyle = 'rgba(240, 217, 131, 0.12)';
+        ctx.beginPath();
+        ctx.roundRect(node.x - 3, node.y - 3, node.w + 6, node.h + 6, 14);
+        ctx.fill();
+        // Myelin body
+        ctx.fillStyle = '#f0d983';
+        ctx.beginPath();
+        ctx.roundRect(node.x, node.y, node.w, node.h, 12);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        // Damaged debris
+        ctx.fillStyle = 'rgba(255, 107, 122, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(node.x + node.w / 3, node.y + node.h / 2, node.w / 2.5, 8, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(node.x + node.w * 0.7, node.y + node.h / 2, node.w / 3, 5, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // Signal movement
+    let currentSpeed = NORMAL_GAP_SPEED;
+    let onHealthy = false, onDamaged = false;
+    myelinNodes.forEach(node => {
+      if (signal.x >= node.x - 10 && signal.x <= node.x + node.w + 10) {
+        if (node.healthy) onHealthy = true;
+        else onDamaged = true;
+      }
+    });
+    if (onHealthy) currentSpeed = MYELIN_SPEED;
+    else if (onDamaged) currentSpeed = DEMYELINATED_SPEED;
+    signal.x += currentSpeed;
+    if (signal.x > w + 100) signal.x = -100;
+
+    // Signal glow + core
+    const radius = onDamaged ? 8 : (onHealthy ? 16 : 12);
+    const color = onDamaged ? '#ff6b7a' : '#6ee7e5';
+    ctx.beginPath();
+    ctx.arc(signal.x, axonY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = onDamaged ? 15 : 35;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(signal.x, axonY, radius * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    requestAnimationFrame(draw);
+  }
+
+  // Click to destroy myelin
+  canvas.addEventListener('click', (e) => {
+    if (!attackMode) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    let hit = false;
+    myelinNodes.forEach(node => {
+      if (node.healthy &&
+          mouseX >= node.x && mouseX <= node.x + node.w &&
+          mouseY >= node.y - 20 && mouseY <= node.y + node.h + 20) {
+        node.healthy = false;
+        hit = true;
+      }
+    });
+    if (hit) {
+      canvas.style.opacity = '0.5';
+      setTimeout(() => { canvas.style.opacity = '1'; canvas.style.transition = 'opacity 0.2s'; }, 50);
+      updateStats();
+    }
+  });
+
+  function updateStats() {
+    const healthyCount = myelinNodes.filter(n => n.healthy).length;
+    const damagedPct = ((MYELIN_COUNT - healthyCount) / MYELIN_COUNT) * 100;
+
+    const speedEl = document.getElementById('speedStat');
+    const lesionEl = document.getElementById('lesionStat');
+    const currentVel = healthyCount === MYELIN_COUNT
+      ? 120
+      : (healthyCount === 0 ? 5 : Math.round((healthyCount / MYELIN_COUNT) * 120));
+
+    speedEl.innerHTML = currentVel + '<span class="unit">m/s</span>';
+    speedEl.style.color = currentVel < 50 ? 'var(--danger)' : 'var(--ink-hi)';
+    lesionEl.innerHTML = Math.round(damagedPct) + '<span class="unit">%</span>';
+    lesionEl.style.color = damagedPct > 0 ? 'var(--danger)' : 'var(--ink-hi)';
+
+    // MRI lesions
+    for (let i = 0; i < MYELIN_COUNT; i++) {
+      const lesion = document.getElementById('lesion-' + (i + 1));
+      if (!lesion) continue;
+      if (MYELIN_COUNT - healthyCount > i) {
+        lesion.style.opacity = 0.8 + Math.random() * 0.2;
+      } else {
+        lesion.style.opacity = 0;
+      }
+    }
+
+    updateNavButtons();
+  }
+
+  // Boot
+  setTimeout(() => {
+    resize();
+    updateStats();
+    requestAnimationFrame(draw);
+  }, 50);
+</script>
 </body>
 </html>
