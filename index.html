@@ -407,7 +407,7 @@
         <div class="step-heading">Step 3: Intervention</div>
         <p>Your cursor is now simulating the autoimmune attack. <strong>Press and drag across the yellow myelin sheaths</strong> to scrub the myelin away.</p>
         <p>You can also <strong>hover over a sheath and scroll</strong> to thin it or thicken it back. Scroll down to strip myelin. Scroll up to regrow it. Watch the signal speed respond in real time, both ways.</p>
-        <div class="sketch-prompt"><span class="pen">✎</span>Record the conduction velocity at 25%, 50%, and 75% lesion volume. Then scroll up on a segment to restore it and note how the signal recovers.</div>
+        <div class="sketch-prompt"><span class="pen">✎</span>Record three data points of your choice. Any three lesion volumes and the matching velocities. You can also scroll up on a segment to watch the signal recover. When you are ready, move to the conclusion.</div>
       </div>
 
       <!-- Step 4 -->
@@ -470,7 +470,7 @@
   let hypothesisCorrect = false;
   let isScrubbing = false;
   const CORRECT_CHOICE = 'slower';
-  const ADVANCE_LESION_THRESHOLD = 0.7; // 70% overall damage required to proceed
+  const ADVANCE_LESION_THRESHOLD = 0.1; // unlocks Next once they have clearly interacted
 
   // =====================================================
   // Step navigation
