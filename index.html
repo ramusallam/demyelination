@@ -13,6 +13,7 @@
     --ink-low: #58688a;
     --accent: #6ee7e5;
     --danger: #ff6b7a;
+    --success: #5fd6a6;
     --myelin: #f0d983;
     --axon: #3d5a80;
     --panel: rgba(255,255,255,0.02);
@@ -261,12 +262,36 @@
     cursor: pointer;
     transition: all 150ms ease;
   }
-  .choice-btn:hover { background: rgba(255, 255, 255, 0.8); border-color: rgba(122, 58, 0, 0.45); }
-  .choice-btn.selected {
-    background: rgba(122, 58, 0, 0.1);
-    border-color: #7a3a00;
-    color: #7a3a00;
+  .choice-btn:hover:not(.correct):not(.wrong) { background: rgba(255, 255, 255, 0.8); border-color: rgba(122, 58, 0, 0.45); }
+  .choice-btn.correct {
+    background: rgba(95, 214, 166, 0.18);
+    border-color: var(--success);
+    color: #0f5b3f;
+    box-shadow: 0 0 0 2px rgba(95, 214, 166, 0.25);
+    cursor: default;
   }
+  .choice-btn.correct::after { content: ' ✓'; color: #0f5b3f; font-weight: 700; }
+  .choice-btn.wrong {
+    background: rgba(255, 107, 122, 0.15);
+    border-color: var(--danger);
+    color: #9a1b2a;
+    animation: shake 0.3s ease;
+  }
+  .choice-btn.wrong::after { content: ' ✕'; color: #9a1b2a; font-weight: 700; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .choice-feedback {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 18px;
+    transition: color 200ms ease;
+  }
+  .choice-feedback.wrong { color: #9a1b2a; }
+  .choice-feedback.correct { color: #0f5b3f; }
   .sketch-prompt {
     margin-top: 10px;
     padding-top: 10px;
@@ -373,15 +398,16 @@
           <button class="choice-btn" data-choice="slower">It will travel much slower</button>
           <button class="choice-btn" data-choice="same">It will stay the same</button>
         </div>
+        <div class="choice-feedback" id="choiceFeedback"></div>
         <div class="sketch-prompt"><span class="pen">✎</span>Write your prediction in your handbook and one sentence explaining your reasoning.</div>
       </div>
 
       <!-- Step 3 -->
       <div class="step" id="step-3" style="display:none">
         <div class="step-heading">Step 3: Intervention</div>
-        <p>Your cursor is now simulating the autoimmune attack. <strong>Click on the yellow myelin sheaths</strong> on the axon above to destroy them.</p>
-        <p>Watch the conduction velocity drop with each strike. Watch the MRI scan on the right begin to show lesions, bright white spots where myelin has been lost.</p>
-        <div class="sketch-prompt"><span class="pen">✎</span>After each click, record the conduction velocity and lesion volume in your handbook.</div>
+        <p>Your cursor is now simulating the autoimmune attack. <strong>Press and drag across the yellow myelin sheaths</strong> to scrub the myelin away.</p>
+        <p>The damage is gradual, just like a real attack. Watch the conduction velocity drop steadily as the myelin thins. Watch the MRI scan begin to light up with lesions.</p>
+        <div class="sketch-prompt"><span class="pen">✎</span>Record the conduction velocity at 25%, 50%, and 75% lesion volume in your handbook.</div>
       </div>
 
       <!-- Step 4 -->
@@ -441,7 +467,10 @@
 
   let currentStep = 1;
   let attackMode = false;
-  let hypothesisSelected = false;
+  let hypothesisCorrect = false;
+  let isScrubbing = false;
+  const CORRECT_CHOICE = 'slower';
+  const ADVANCE_LESION_THRESHOLD = 0.7; // 70% overall damage required to proceed
 
   // =====================================================
   // Step navigation
@@ -480,10 +509,10 @@
       nextBtn.disabled = false;
     } else {
       nextBtn.textContent = 'Next →';
-      // Step 2 requires a hypothesis selection before moving forward
-      if (currentStep === 2) nextBtn.disabled = !hypothesisSelected;
-      // Step 3 requires all myelin destroyed before moving forward
-      else if (currentStep === 3) nextBtn.disabled = myelinNodes.some(n => n.healthy);
+      // Step 2 requires the correct hypothesis before moving forward
+      if (currentStep === 2) nextBtn.disabled = !hypothesisCorrect;
+      // Step 3 requires enough overall damage before moving forward
+      else if (currentStep === 3) nextBtn.disabled = overallDamage() < ADVANCE_LESION_THRESHOLD;
       else nextBtn.disabled = false;
     }
   }
@@ -514,19 +543,31 @@
   resetBtn.addEventListener('click', resetAll);
 
   // Hypothesis selection
+  const choiceFeedback = document.getElementById('choiceFeedback');
   document.getElementById('choiceGroup').addEventListener('click', (e) => {
     const btn = e.target.closest('.choice-btn');
     if (!btn) return;
-    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    hypothesisSelected = true;
+    if (btn.classList.contains('correct')) return; // lock once correct
+    const choice = btn.dataset.choice;
+    if (choice === CORRECT_CHOICE) {
+      document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('wrong'));
+      btn.classList.add('correct');
+      hypothesisCorrect = true;
+      choiceFeedback.textContent = 'Correct. Myelin is electrical insulation, so losing it slows the signal dramatically.';
+      choiceFeedback.className = 'choice-feedback correct';
+    } else {
+      btn.classList.add('wrong');
+      choiceFeedback.textContent = 'Not quite. Try again, think about what myelin does for the signal.';
+      choiceFeedback.className = 'choice-feedback wrong';
+    }
     updateNavButtons();
   });
 
   function resetAll() {
-    hypothesisSelected = false;
-    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-    myelinNodes.forEach(n => n.healthy = true);
+    hypothesisCorrect = false;
+    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('correct', 'wrong'));
+    if (choiceFeedback) { choiceFeedback.textContent = ''; choiceFeedback.className = 'choice-feedback'; }
+    myelinNodes.forEach(n => n.health = 1);
     updateStats();
     showStep(1);
   }
@@ -557,7 +598,7 @@
     axonY = h / 2;
     const padding = Math.min(w * 0.1, 80);
     const segW = (w - padding * 2) / MYELIN_COUNT;
-    const wasHealthy = myelinNodes.map(n => n.healthy);
+    const prevHealth = myelinNodes.map(n => n.health);
     myelinNodes = [];
     for (let i = 0; i < MYELIN_COUNT; i++) {
       myelinNodes.push({
@@ -565,10 +606,16 @@
         y: axonY - 25,
         w: segW * 0.8,
         h: 50,
-        healthy: wasHealthy[i] !== undefined ? wasHealthy[i] : true,
+        health: prevHealth[i] !== undefined ? prevHealth[i] : 1,
         idx: i
       });
     }
+  }
+
+  function overallDamage() {
+    if (!myelinNodes.length) return 0;
+    const total = myelinNodes.reduce((s, n) => s + n.health, 0);
+    return 1 - (total / myelinNodes.length);
   }
 
   let signal = { x: 0 };
@@ -588,56 +635,76 @@
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Myelin sheaths (healthy) or debris (damaged)
+    // Myelin sheaths rendered proportionally to health
     myelinNodes.forEach(node => {
-      if (node.healthy) {
-        // Outer glow
-        ctx.fillStyle = 'rgba(240, 217, 131, 0.12)';
+      const h = Math.max(0, Math.min(1, node.health));
+      // Outer glow (fades with health)
+      if (h > 0.05) {
+        ctx.fillStyle = `rgba(240, 217, 131, ${0.12 * h})`;
         ctx.beginPath();
         ctx.roundRect(node.x - 3, node.y - 3, node.w + 6, node.h + 6, 14);
         ctx.fill();
-        // Myelin body
-        ctx.fillStyle = '#f0d983';
+      }
+      if (h > 0.02) {
+        // Myelin body fades yellow → reddish-brown as it thins
+        const r = Math.round(240 + (255 - 240) * (1 - h));
+        const g = Math.round(217 * h + 107 * (1 - h));
+        const b = Math.round(131 * h + 122 * (1 - h));
+        ctx.fillStyle = `rgba(${r},${g},${b},${0.25 + 0.75 * h})`;
+        // Height shrinks as myelin scrubs away
+        const shrinkH = node.h * (0.35 + 0.65 * h);
+        const shrinkY = node.y + (node.h - shrinkH) / 2;
         ctx.beginPath();
-        ctx.roundRect(node.x, node.y, node.w, node.h, 12);
+        ctx.roundRect(node.x, shrinkY, node.w, shrinkH, 12);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      } else {
-        // Damaged debris
-        ctx.fillStyle = 'rgba(255, 107, 122, 0.2)';
+        if (h > 0.5) {
+          ctx.strokeStyle = `rgba(255,255,255,${0.4 * h})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+      // Damage debris appears as health decreases
+      if (h < 0.7) {
+        const damage = 1 - h;
+        ctx.fillStyle = `rgba(255, 107, 122, ${0.25 * damage})`;
         ctx.beginPath();
-        ctx.ellipse(node.x + node.w / 3, node.y + node.h / 2, node.w / 2.5, 8, 0.2, 0, Math.PI * 2);
+        ctx.ellipse(node.x + node.w / 3, node.y + node.h / 2, node.w / 2.8, 7, 0.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(node.x + node.w * 0.7, node.y + node.h / 2, node.w / 3, 5, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(node.x + node.w * 0.7, node.y + node.h / 2, node.w / 3.2, 5, -0.2, 0, Math.PI * 2);
         ctx.fill();
       }
     });
 
-    // Signal movement
+    // Signal speed interpolated from the local segment's health
     let currentSpeed = NORMAL_GAP_SPEED;
-    let onHealthy = false, onDamaged = false;
+    let localHealth = -1;
     myelinNodes.forEach(node => {
       if (signal.x >= node.x - 10 && signal.x <= node.x + node.w + 10) {
-        if (node.healthy) onHealthy = true;
-        else onDamaged = true;
+        localHealth = node.health;
       }
     });
-    if (onHealthy) currentSpeed = MYELIN_SPEED;
-    else if (onDamaged) currentSpeed = DEMYELINATED_SPEED;
+    if (localHealth >= 0) {
+      currentSpeed = DEMYELINATED_SPEED + (MYELIN_SPEED - DEMYELINATED_SPEED) * localHealth;
+    }
     signal.x += currentSpeed;
     if (signal.x > w + 100) signal.x = -100;
 
-    // Signal glow + core
-    const radius = onDamaged ? 8 : (onHealthy ? 16 : 12);
-    const color = onDamaged ? '#ff6b7a' : '#6ee7e5';
+    // Signal glow + core interpolated with local health
+    const onMyelin = localHealth >= 0;
+    const healthMix = onMyelin ? localHealth : 1;
+    const radius = onMyelin ? (8 + 8 * localHealth) : 12;
+    // Color: teal → danger as health drops
+    const mix = (a, b, t) => Math.round(a * t + b * (1 - t));
+    const r = mix(110, 255, healthMix);
+    const g = mix(231, 107, healthMix);
+    const bl = mix(229, 122, healthMix);
+    const color = onMyelin ? `rgb(${r},${g},${bl})` : '#6ee7e5';
     ctx.beginPath();
     ctx.arc(signal.x, axonY, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = onDamaged ? 15 : 35;
+    ctx.shadowBlur = 15 + 20 * healthMix;
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff';
@@ -648,52 +715,79 @@
     requestAnimationFrame(draw);
   }
 
-  // Click to destroy myelin
-  canvas.addEventListener('click', (e) => {
-    if (!attackMode) return;
+  // Scrub to damage myelin — press and drag across segments
+  const SCRUB_AMOUNT = 0.035; // health removed per mousemove tick
+  function scrubAt(clientX, clientY) {
+    if (!attackMode) return false;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     let hit = false;
     myelinNodes.forEach(node => {
-      if (node.healthy &&
-          mouseX >= node.x && mouseX <= node.x + node.w &&
-          mouseY >= node.y - 20 && mouseY <= node.y + node.h + 20) {
-        node.healthy = false;
+      if (node.health > 0 &&
+          x >= node.x && x <= node.x + node.w &&
+          y >= node.y - 20 && y <= node.y + node.h + 20) {
+        node.health = Math.max(0, node.health - SCRUB_AMOUNT);
         hit = true;
       }
     });
-    if (hit) {
-      canvas.style.opacity = '0.5';
-      setTimeout(() => { canvas.style.opacity = '1'; canvas.style.transition = 'opacity 0.2s'; }, 50);
-      updateStats();
-    }
+    if (hit) updateStats();
+    return hit;
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (!attackMode) return;
+    isScrubbing = true;
+    scrubAt(e.clientX, e.clientY);
   });
+  canvas.addEventListener('mousemove', (e) => {
+    if (!attackMode || !isScrubbing) return;
+    scrubAt(e.clientX, e.clientY);
+  });
+  const stopScrub = () => { isScrubbing = false; };
+  window.addEventListener('mouseup', stopScrub);
+  canvas.addEventListener('mouseleave', stopScrub);
+
+  // Touch support for iPads / Chromebooks
+  canvas.addEventListener('touchstart', (e) => {
+    if (!attackMode) return;
+    isScrubbing = true;
+    const t = e.touches[0];
+    scrubAt(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (e) => {
+    if (!attackMode || !isScrubbing) return;
+    const t = e.touches[0];
+    scrubAt(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchend', stopScrub);
 
   function updateStats() {
-    const healthyCount = myelinNodes.filter(n => n.healthy).length;
-    const damagedPct = ((MYELIN_COUNT - healthyCount) / MYELIN_COUNT) * 100;
+    const avgHealth = myelinNodes.length
+      ? myelinNodes.reduce((s, n) => s + n.health, 0) / myelinNodes.length
+      : 1;
+    const damagedPct = (1 - avgHealth) * 100;
 
     const speedEl = document.getElementById('speedStat');
     const lesionEl = document.getElementById('lesionStat');
-    const currentVel = healthyCount === MYELIN_COUNT
-      ? 120
-      : (healthyCount === 0 ? 5 : Math.round((healthyCount / MYELIN_COUNT) * 120));
+    // 120 m/s at full myelin → 5 m/s at full demyelination (nonlinear feel)
+    const currentVel = Math.max(5, Math.round(5 + (120 - 5) * Math.pow(avgHealth, 1.1)));
 
     speedEl.innerHTML = currentVel + '<span class="unit">m/s</span>';
-    speedEl.style.color = currentVel < 50 ? 'var(--danger)' : 'var(--ink-hi)';
+    speedEl.style.color = currentVel < 50 ? 'var(--danger)' : (currentVel < 90 ? '#ffd166' : 'var(--ink-hi)');
     lesionEl.innerHTML = Math.round(damagedPct) + '<span class="unit">%</span>';
-    lesionEl.style.color = damagedPct > 0 ? 'var(--danger)' : 'var(--ink-hi)';
+    lesionEl.style.color = damagedPct > 50 ? 'var(--danger)' : (damagedPct > 0 ? '#ffd166' : 'var(--ink-hi)');
 
-    // MRI lesions
+    // MRI lesions fade proportional to each segment's damage
     for (let i = 0; i < MYELIN_COUNT; i++) {
       const lesion = document.getElementById('lesion-' + (i + 1));
       if (!lesion) continue;
-      if (MYELIN_COUNT - healthyCount > i) {
-        lesion.style.opacity = 0.8 + Math.random() * 0.2;
-      } else {
-        lesion.style.opacity = 0;
-      }
+      const node = myelinNodes[i];
+      if (!node) { lesion.style.opacity = 0; continue; }
+      const damage = 1 - node.health;
+      lesion.style.opacity = damage < 0.05 ? 0 : (0.3 + 0.7 * damage);
     }
 
     updateNavButtons();
