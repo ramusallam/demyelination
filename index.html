@@ -142,7 +142,50 @@
     width: 100%;
     height: 320px;
   }
-  canvas.attacking { cursor: crosshair; }
+  canvas.attacking {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28'><circle cx='14' cy='14' r='11' fill='rgba(255,107,122,0.12)' stroke='%23ff6b7a' stroke-width='2'/><line x1='14' y1='4' x2='14' y2='9' stroke='%23ff6b7a' stroke-width='2'/><line x1='14' y1='19' x2='14' y2='24' stroke='%23ff6b7a' stroke-width='2'/><line x1='4' y1='14' x2='9' y2='14' stroke='%23ff6b7a' stroke-width='2'/><line x1='19' y1='14' x2='24' y2='14' stroke='%23ff6b7a' stroke-width='2'/><circle cx='14' cy='14' r='2' fill='%23ff6b7a'/></svg>") 14 14, crosshair;
+  }
+
+  .segment-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 320px;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .segment-reset {
+    position: absolute;
+    transform: translateX(-50%);
+    pointer-events: auto;
+    padding: 5px 11px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    background: rgba(95, 214, 166, 0.14);
+    border: 1px solid rgba(95, 214, 166, 0.5);
+    color: var(--success);
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0;
+    transform-origin: center;
+    transition: opacity 250ms ease, background 150ms ease, transform 150ms ease;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .segment-reset.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .segment-reset:hover {
+    background: rgba(95, 214, 166, 0.26);
+    transform: translateX(-50%) translateY(-1px);
+  }
+  .segment-reset:active {
+    transform: translateX(-50%) translateY(0);
+  }
 
   .phase-bar {
     padding: 16px 28px;
@@ -363,6 +406,7 @@
     <div class="stage-label">Motor Neuron Axon</div>
     <div class="attack-badge" id="attackBadge">Immune Attack Active · Click Myelin</div>
     <canvas id="axonCanvas"></canvas>
+    <div class="segment-controls" id="segmentControls"></div>
     <div class="phase-bar">
       <div class="phase-name" id="phaseName">Step 1 · Exploration</div>
       <div class="stats-block">
@@ -406,7 +450,7 @@
       <div class="step" id="step-3" style="display:none">
         <div class="step-heading">Step 3: Intervention</div>
         <p>Your cursor is now simulating the autoimmune attack. <strong>Press and drag across the yellow myelin sheaths</strong> to scrub the myelin away.</p>
-        <p>You can also <strong>hover over a sheath and scroll</strong> to thin it or thicken it back. Scroll down to strip myelin. Scroll up to regrow it. Watch the signal speed respond in real time, both ways.</p>
+        <p>You can also <strong>hover over a sheath and scroll</strong> to thin it or thicken it back, or click the <strong>↺ Restore</strong> button that appears under each damaged sheath to snap it back to full health. Watch the signal speed respond in real time, both ways.</p>
         <div class="sketch-prompt"><span class="pen">✎</span>Record three data points of your choice. Any three lesion volumes and the matching velocities. You can also scroll up on a segment to watch the signal recover. When you are ready, move to the conclusion.</div>
       </div>
 
@@ -610,6 +654,58 @@
         idx: i
       });
     }
+    buildSegmentControls();
+  }
+
+  // Per-segment restore buttons
+  const segmentControls = document.getElementById('segmentControls');
+  let resetButtons = [];
+  function buildSegmentControls() {
+    segmentControls.innerHTML = '';
+    resetButtons = [];
+    myelinNodes.forEach((node, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'segment-reset';
+      btn.type = 'button';
+      btn.innerHTML = '↺ Restore';
+      btn.addEventListener('click', () => {
+        node.health = 1;
+        updateStats();
+      });
+      segmentControls.appendChild(btn);
+      resetButtons.push(btn);
+    });
+    positionSegmentControls();
+  }
+  function positionSegmentControls() {
+    myelinNodes.forEach((node, i) => {
+      const btn = resetButtons[i];
+      if (!btn) return;
+      const centerX = node.x + node.w / 2;
+      const belowY = node.y + node.h + 18;
+      btn.style.left = centerX + 'px';
+      btn.style.top = belowY + 'px';
+    });
+  }
+  function refreshResetVisibility() {
+    myelinNodes.forEach((node, i) => {
+      const btn = resetButtons[i];
+      if (!btn) return;
+      if (node.health < 0.995) btn.classList.add('visible');
+      else btn.classList.remove('visible');
+    });
+  }
+
+  // Scrub particle system for visceral feedback
+  let scrubParticles = [];
+  function spawnScrubParticle(x, y) {
+    scrubParticles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 0.5) * 2 - 0.8,
+      life: 1,
+      r: 2 + Math.random() * 3
+    });
   }
 
   function overallDamage() {
@@ -712,11 +808,31 @@
     ctx.arc(signal.x, axonY, radius * 0.4, 0, Math.PI * 2);
     ctx.fill();
 
+    // Scrub particles (drawn on top of everything)
+    for (let i = scrubParticles.length - 1; i >= 0; i--) {
+      const p = scrubParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08; // gravity
+      p.life -= 0.05;
+      if (p.life <= 0) {
+        scrubParticles.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 107, 122, ${p.life * 0.7})`;
+      ctx.shadowColor = 'rgba(255, 107, 122, 0.6)';
+      ctx.shadowBlur = 6;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
     requestAnimationFrame(draw);
   }
 
   // Scrub to damage myelin — press and drag across segments
-  const SCRUB_AMOUNT = 0.035; // health removed per mousemove tick
+  const SCRUB_AMOUNT = 0.055; // health removed per mousemove tick
   function scrubAt(clientX, clientY) {
     if (!attackMode) return false;
     const rect = canvas.getBoundingClientRect();
@@ -731,7 +847,11 @@
         hit = true;
       }
     });
-    if (hit) updateStats();
+    if (hit) {
+      // Spray a few particles for visceral feedback
+      for (let i = 0; i < 5; i++) spawnScrubParticle(x, y);
+      updateStats();
+    }
     return hit;
   }
 
@@ -814,6 +934,7 @@
       lesion.style.opacity = damage < 0.05 ? 0 : (0.3 + 0.7 * damage);
     }
 
+    refreshResetVisibility();
     updateNavButtons();
   }
 
