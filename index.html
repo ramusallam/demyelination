@@ -375,6 +375,33 @@
   .matter-note .chip.white { background: #ecf1f5; color: #35425a; border: 1px solid #cfd7df; }
   .matter-note .chip.gray  { background: #a9a8ae; color: #1f2230; }
 
+  .gate-question {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(255, 252, 234, 0.7);
+    border: 1px solid rgba(122, 86, 0, 0.25);
+    border-radius: 10px;
+  }
+  .gate-question .gate-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #7a5600;
+    margin-bottom: 6px;
+  }
+  .gate-question p { margin: 4px 0 8px; font-size: 13.5px; line-height: 1.5; }
+  .gate-question .chip {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 1px;
+  }
+  .gate-question .chip.white { background: #ecf1f5; color: #35425a; border: 1px solid #cfd7df; }
+  .gate-question .chip.gray  { background: #a9a8ae; color: #1f2230; }
+
   nav {
     margin-top: 14px;
     display: flex;
@@ -493,7 +520,19 @@
           <span class="mn-title">What you're doing</span>
           Every sheath you strip is a small patch of <span class="chip white">White Matter</span> becoming a lesion. You're simulating, in one axon, what's happening across millions of axons inside a real MS lesion.
         </div>
-        <div class="sketch-prompt"><span class="pen">✎</span>Record three data points of your choice. Any three lesion volumes and the matching velocities. You can also scroll up on a segment to watch the signal recover. When you are ready, move to the conclusion.</div>
+        <div class="sketch-prompt"><span class="pen">✎</span>Record three data points of your choice. Any three lesion volumes and the matching velocities. You can also scroll up on a segment to watch the signal recover.</div>
+
+        <div class="gate-question">
+          <div class="gate-title">Check your thinking before moving on</div>
+          <p>MS primarily attacks <span class="chip white">White Matter</span> (myelinated wiring), while <span class="chip gray">Gray Matter</span> (cell bodies and synapses) is largely spared in classic presentations. What does this predict about typical early MS symptoms?</p>
+          <div class="choice-group" id="gateChoices">
+            <button class="choice-btn" data-gate="memory">Immediate, severe memory loss and personality changes from destroyed synapses</button>
+            <button class="choice-btn" data-gate="motor">Motor, sensory, and visual symptoms (numbness, weakness, blurry vision, coordination issues) because signals travel too slowly through damaged wiring</button>
+            <button class="choice-btn" data-gate="newSyn">Complete shutdown of the ability to form new synapses</button>
+            <button class="choice-btn" data-gate="paralysis">Sudden, total paralysis from nerve cell death</button>
+          </div>
+          <div class="choice-feedback" id="gateFeedback"></div>
+        </div>
       </div>
 
       <!-- Step 4 -->
@@ -560,7 +599,9 @@
   let hypothesisCorrect = false;
   let isScrubbing = false;
   let scrubHits = 0; // counts scrub ticks that landed on myelin
+  let gateAnswered = false; // Step 3 conceptual gate
   const CORRECT_CHOICE = 'slower';
+  const CORRECT_GATE = 'motor';
   const ADVANCE_SCRUB_HITS = 10; // just a few interactions unlocks Next
 
   // =====================================================
@@ -602,8 +643,8 @@
       nextBtn.textContent = 'Next →';
       // Step 2 requires the correct hypothesis before moving forward
       if (currentStep === 2) nextBtn.disabled = !hypothesisCorrect;
-      // Step 3: just a little interaction unlocks Next — they don't need to scrub away everything
-      else if (currentStep === 3) nextBtn.disabled = scrubHits < ADVANCE_SCRUB_HITS;
+      // Step 3: a little interaction + correct conceptual answer unlocks Next
+      else if (currentStep === 3) nextBtn.disabled = (scrubHits < ADVANCE_SCRUB_HITS) || !gateAnswered;
       else nextBtn.disabled = false;
     }
   }
@@ -633,7 +674,7 @@
   });
   resetBtn.addEventListener('click', resetAll);
 
-  // Hypothesis selection
+  // Hypothesis selection (Step 2)
   const choiceFeedback = document.getElementById('choiceFeedback');
   document.getElementById('choiceGroup').addEventListener('click', (e) => {
     const btn = e.target.closest('.choice-btn');
@@ -641,7 +682,7 @@
     if (btn.classList.contains('correct')) return; // lock once correct
     const choice = btn.dataset.choice;
     if (choice === CORRECT_CHOICE) {
-      document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('wrong'));
+      document.querySelectorAll('#choiceGroup .choice-btn').forEach(b => b.classList.remove('wrong'));
       btn.classList.add('correct');
       hypothesisCorrect = true;
       choiceFeedback.textContent = 'Correct. Myelin is electrical insulation, so losing it slows the signal dramatically.';
@@ -654,11 +695,34 @@
     updateNavButtons();
   });
 
+  // Gate question (Step 3) — white matter concept check
+  const gateFeedback = document.getElementById('gateFeedback');
+  document.getElementById('gateChoices').addEventListener('click', (e) => {
+    const btn = e.target.closest('.choice-btn');
+    if (!btn) return;
+    if (btn.classList.contains('correct')) return; // lock once correct
+    const choice = btn.dataset.gate;
+    if (choice === CORRECT_GATE) {
+      document.querySelectorAll('#gateChoices .choice-btn').forEach(b => b.classList.remove('wrong'));
+      btn.classList.add('correct');
+      gateAnswered = true;
+      gateFeedback.innerHTML = 'Right. White matter lesions slow or block signal conduction, which shows up as numbness, weakness, blurry vision, and coordination issues. The processing centers, the synapses in gray matter, are largely intact early on. <em>Heads up: about 7 in 10 people with MS also experience some cognitive changes over time, and those are more tied to long-term gray matter atrophy than to individual white matter lesions.</em>';
+      gateFeedback.className = 'choice-feedback correct';
+    } else {
+      btn.classList.add('wrong');
+      gateFeedback.textContent = 'Not quite. White matter is wiring, gray matter is processing. If the wiring is damaged but the processing centers are intact, which kind of problems should show up first?';
+      gateFeedback.className = 'choice-feedback wrong';
+    }
+    updateNavButtons();
+  });
+
   function resetAll() {
     hypothesisCorrect = false;
+    gateAnswered = false;
     scrubHits = 0;
     document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('correct', 'wrong'));
     if (choiceFeedback) { choiceFeedback.textContent = ''; choiceFeedback.className = 'choice-feedback'; }
+    if (gateFeedback) { gateFeedback.textContent = ''; gateFeedback.className = 'choice-feedback'; }
     myelinNodes.forEach(n => n.health = 1);
     updateStats();
     showStep(1);
