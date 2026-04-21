@@ -345,6 +345,36 @@
   }
   .sketch-prompt .pen { font-style: normal; margin-right: 4px; }
 
+  .matter-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(90deg, rgba(230, 235, 240, 0.55), rgba(240, 230, 245, 0.55));
+    border-left: 3px solid var(--axon);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #35425a;
+  }
+  .matter-note .mn-title {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--axon);
+    margin-bottom: 4px;
+  }
+  .matter-note .chip {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 2px;
+  }
+  .matter-note .chip.white { background: #ecf1f5; color: #35425a; border: 1px solid #cfd7df; }
+  .matter-note .chip.gray  { background: #a9a8ae; color: #1f2230; }
+
   nav {
     margin-top: 14px;
     display: flex;
@@ -429,13 +459,21 @@
         <div class="step-heading">Step 1: Exploration</div>
         <p>Observe the action potential, the glowing signal traveling down the healthy axon. It is wrapped in <strong>myelin sheaths</strong>, the yellow segments.</p>
         <p>The signal jumps rapidly between the gaps. This is called <strong>saltatory conduction</strong>, and it is what makes healthy neural signaling so fast.</p>
-        <div class="sketch-prompt"><span class="pen">✎</span>Sketch the axon in your handbook. Label the myelin sheaths, the gaps (Nodes of Ranvier), and the signal.</div>
+        <div class="matter-note">
+          <span class="mn-title">Zooming out: gray vs white matter</span>
+          The axon segment you're watching lives in <span class="chip white">White Matter</span>. White matter is the brain's wiring, bundles of myelinated axons that carry signals from place to place. <span class="chip gray">Gray Matter</span> is where the cell bodies and synapses live, the thinking and processing centers. Myelin is what makes white matter look white.
+        </div>
+        <div class="sketch-prompt"><span class="pen">✎</span>Sketch the axon in your handbook. Label the myelin sheaths, the gaps (Nodes of Ranvier), and the signal. Add a quick side note: is this slice from gray or white matter?</div>
       </div>
 
       <!-- Step 2 -->
       <div class="step" id="step-2" style="display:none">
         <div class="step-heading">Step 2: Hypothesis</div>
         <p>Multiple Sclerosis is an autoimmune disease. The body's own immune system attacks and destroys the myelin sheaths on neurons in the brain and spinal cord.</p>
+        <div class="matter-note">
+          <span class="mn-title">Where MS strikes</span>
+          Because MS attacks myelin, it primarily damages <span class="chip white">White Matter</span>, the wiring highways. Early in the disease, <span class="chip gray">Gray Matter</span> is largely spared. That's why MS is often called a <em>white matter disease</em>.
+        </div>
         <p><strong>Prediction:</strong> What will happen to the speed of the action potential if the myelin is removed?</p>
         <div class="choice-group" id="choiceGroup">
           <button class="choice-btn" data-choice="faster">It will travel faster</button>
@@ -451,6 +489,10 @@
         <div class="step-heading">Step 3: Intervention</div>
         <p>Your cursor is now simulating the autoimmune attack. <strong>Press and drag across the yellow myelin sheaths</strong> to scrub the myelin away.</p>
         <p>You can also <strong>hover over a sheath and scroll</strong> to thin it or thicken it back, or click the <strong>↺ Restore</strong> button that appears under each damaged sheath to snap it back to full health. Watch the signal speed respond in real time, both ways.</p>
+        <div class="matter-note">
+          <span class="mn-title">What you're doing</span>
+          Every sheath you strip is a small patch of <span class="chip white">White Matter</span> becoming a lesion. You're simulating, in one axon, what's happening across millions of axons inside a real MS lesion.
+        </div>
         <div class="sketch-prompt"><span class="pen">✎</span>Record three data points of your choice. Any three lesion volumes and the matching velocities. You can also scroll up on a segment to watch the signal recover. When you are ready, move to the conclusion.</div>
       </div>
 
@@ -459,7 +501,11 @@
         <div class="step-heading">Step 4: Conclusion</div>
         <p>Without myelin insulation, neural signals degrade and slow down drastically. On the T2-weighted MRI scan, this damage appears as white matter <strong>lesions</strong>.</p>
         <p>These lesions represent areas of demyelination and inflammation. They are the physical basis for the sensory, motor, and cognitive symptoms that characterize MS.</p>
-        <div class="sketch-prompt"><span class="pen">✎</span>Write a 2-sentence conclusion comparing the healthy and demyelinated axon. Compare your prediction from Step 2 to what you observed.</div>
+        <div class="matter-note">
+          <span class="mn-title">Tying it together</span>
+          The bright MRI spots cluster in <span class="chip white">White Matter</span> because that's where the myelin is. <span class="chip gray">Gray Matter</span> can also be affected as MS progresses, but the defining signature of the disease is white matter damage. Symptoms match which wiring pathway got hit.
+        </div>
+        <div class="sketch-prompt"><span class="pen">✎</span>Write a 2-sentence conclusion comparing the healthy and demyelinated axon. Include the term <em>white matter</em> in your answer. Compare your prediction from Step 2 to what you observed.</div>
       </div>
     </div>
 
