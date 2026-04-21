@@ -513,8 +513,9 @@
   let attackMode = false;
   let hypothesisCorrect = false;
   let isScrubbing = false;
+  let scrubHits = 0; // counts scrub ticks that landed on myelin
   const CORRECT_CHOICE = 'slower';
-  const ADVANCE_LESION_THRESHOLD = 0.1; // unlocks Next once they have clearly interacted
+  const ADVANCE_SCRUB_HITS = 10; // just a few interactions unlocks Next
 
   // =====================================================
   // Step navigation
@@ -555,8 +556,8 @@
       nextBtn.textContent = 'Next →';
       // Step 2 requires the correct hypothesis before moving forward
       if (currentStep === 2) nextBtn.disabled = !hypothesisCorrect;
-      // Step 3 requires enough overall damage before moving forward
-      else if (currentStep === 3) nextBtn.disabled = overallDamage() < ADVANCE_LESION_THRESHOLD;
+      // Step 3: just a little interaction unlocks Next — they don't need to scrub away everything
+      else if (currentStep === 3) nextBtn.disabled = scrubHits < ADVANCE_SCRUB_HITS;
       else nextBtn.disabled = false;
     }
   }
@@ -609,6 +610,7 @@
 
   function resetAll() {
     hypothesisCorrect = false;
+    scrubHits = 0;
     document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('correct', 'wrong'));
     if (choiceFeedback) { choiceFeedback.textContent = ''; choiceFeedback.className = 'choice-feedback'; }
     myelinNodes.forEach(n => n.health = 1);
@@ -850,7 +852,9 @@
     if (hit) {
       // Spray a few particles for visceral feedback
       for (let i = 0; i < 5; i++) spawnScrubParticle(x, y);
+      scrubHits++;
       updateStats();
+      if (currentStep === 3) updateNavButtons();
     }
     return hit;
   }
@@ -888,7 +892,9 @@
     });
     if (hit) {
       e.preventDefault();
+      scrubHits++;
       updateStats();
+      if (currentStep === 3) updateNavButtons();
     }
   }, { passive: false });
 
