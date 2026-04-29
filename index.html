@@ -6,29 +6,28 @@
 <title>Demyelination</title>
 <style>
   :root {
-    --bg-0: #05070f;
-    --bg-1: #0b1022;
-    --ink-hi: #f2f5fb;
-    --ink-mid: #9fb0ca;
-    --ink-low: #58688a;
-    --accent: #6ee7e5;
-    --danger: #ff6b7a;
-    --success: #5fd6a6;
+    --bg-0: #0a0a0a;
+    --bg-1: #141414;
+    --bg-2: #1e1e1e;
+    --ink-hi: #f5f5f5;
+    --ink-mid: #a0a0a0;
+    --ink-low: #6b7280;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --danger: #ef4444;
+    --success: #22c55e;
     --myelin: #f0d983;
     --axon: #3d5a80;
-    --panel: rgba(255,255,255,0.02);
-    --panel-border: rgba(255,255,255,0.06);
+    --panel: #141414;
+    --panel-border: rgba(255,255,255,0.10);
     --note-bg: #fdf1c6;
     --note-ink: #2a1e08;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
-    background:
-      radial-gradient(ellipse 80% 60% at 50% 0%, #0f1630 0%, transparent 70%),
-      linear-gradient(180deg, #05070f 0%, #030510 100%);
-    background-attachment: fixed;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    background: var(--bg-0);
     color: var(--ink-hi);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
@@ -90,7 +89,7 @@
     position: relative;
     background: var(--panel);
     border: 1px solid var(--panel-border);
-    border-radius: 22px;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow:
       0 30px 80px rgba(0,0,0,0.5),
@@ -244,7 +243,7 @@
     position: relative;
     background: var(--panel);
     border: 1px solid var(--panel-border);
-    border-radius: 22px;
+    border-radius: 12px;
     overflow: hidden;
     padding: 40px 20px 20px;
     display: flex;
@@ -428,7 +427,7 @@
   button:active:not(:disabled) { transform: translateY(1px); }
   button:disabled { opacity: 0.3; cursor: not-allowed; }
   button.primary {
-    background: linear-gradient(180deg, #6ee7e5 0%, #3dbfc0 100%);
+    background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
     color: #03252a;
     border-color: rgba(110, 231, 229, 0.4);
     box-shadow: 0 6px 20px rgba(110, 231, 229, 0.25);
@@ -454,11 +453,6 @@
 </header>
 
 <main>
-  <div class="handbook-banner">
-    <div class="hb-tag">HANDBOOK</div>
-    <div>Follow along in your handbook. For each step: <strong>observe carefully</strong>, <strong>write your prediction</strong>, and <strong>sketch what you see</strong>. Color the healthy axon in yellow, the damaged areas in red.</div>
-  </div>
-
   <div class="stage" id="axonStage">
     <div class="stage-label">Motor Neuron Axon</div>
     <div class="attack-badge" id="attackBadge">Immune Attack Active · Click Myelin</div>
@@ -907,7 +901,7 @@
     const r = mix(110, 255, healthMix);
     const g = mix(231, 107, healthMix);
     const bl = mix(229, 122, healthMix);
-    const color = onMyelin ? `rgb(${r},${g},${bl})` : '#6ee7e5';
+    const color = onMyelin ? `rgb(${r},${g},${bl})` : '#6366f1';
     ctx.beginPath();
     ctx.arc(signal.x, axonY, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
